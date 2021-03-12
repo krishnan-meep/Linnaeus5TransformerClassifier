@@ -1,4 +1,5 @@
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 import cv2
@@ -7,21 +8,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
+from torch.autograd import Variable
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, k, max_len = 1000):
+    def __init__(self, k, max_len = 5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=0.1)
 
         pe = torch.zeros(max_len, k)
         position = torch.arange(0, max_len, dtype = torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, k, 2).float()) * (-np.log(10000.0)/k)
+        div_term = torch.exp(torch.arange(0, k, 2).float() * (-math.log(10000.0)/k))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
     
-    def forward(self, x):
+    def forward(self, x):  
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
@@ -43,7 +45,7 @@ class Transformer(nn.Module):
 
     def forward(self, x):
         x = x * np.sqrt(self.k)
-        #x = self.pos_encoder(x)
+        x = self.pos_encoder(x)
         x = self.transformer_encoder(x)
         x = x.mean(dim = 1)
         x = self.decoder(x)
