@@ -9,7 +9,7 @@ from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, k, max_len = 5000):
+    def __init__(self, k, max_len = 1000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=0.1)
 
@@ -85,8 +85,8 @@ class PatcherDataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = PatcherDataset("../PreTrained Model Studies/Linnaeus 5 64x64/train")
-    test_dataset = PatcherDataset("../PreTrained Model Studies/Linnaeus 5 64x64/test")
+    dataset = PatcherDataset("../../PreTrained Model Studies/Linnaeus 5 64x64/train")
+    test_dataset = PatcherDataset("../../PreTrained Model Studies/Linnaeus 5 64x64/test")
     dataset_loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
     test_dataset_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=True)
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
             optimizer.step()
         
             if i%10 == 0:
-                print("{}/{} Loss : {}".format(i, len(dataset_loader), L))
+                print("Epoch {} ({}/{}) Loss : {}".format(e, i, len(dataset_loader), round(L.item(), 2)))
 
         acc_list= []
         for data, label in tqdm(iter(test_dataset_loader)):
@@ -116,7 +116,9 @@ if __name__ == '__main__':
             correct = (pred == label.squeeze(1)).float().sum()
             acc = correct/data.shape[0]
             acc_list.append(acc)
-        acc = round(np.array(acc_list).mean(), 2)
+
+        acc = np.array(acc_list).mean()   
+        acc = round(acc, 2)
 
         print("Testing Acc: {}".format(acc))
 
