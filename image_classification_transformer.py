@@ -31,23 +31,25 @@ class Transformer(nn.Module):
     def __init__(self, k, n_classes):
         super(Transformer, self).__init__()
         self.k = k
+        self.linear_proj = nn.Linear(k, k, bias=False)
         
-        self.pos_encoder = PositionalEncoding(k)
+        #self.pos_encoder = PositionalEncoding(k)
+        self.pos_embedding = nn.Parameter(torch.randn(1, 16, k))
         encoder_layers = nn.TransformerEncoderLayer(k, 8, k*2)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 2)
         self.decoder = nn.Linear(k, n_classes)
-
-        self.init_weights()
-
-    def init_weights(self):
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-0.1, 0.1)
+        self.layer_norm = nn.LayerNorm(k)
 
     def forward(self, x):
-        x = x * np.sqrt(self.k)
-        x = self.pos_encoder(x)
+        x = self.linear_proj(x)
+        #x = x * np.sqrt(self.k)
+        #x = self.pos_encoder(x)
+        x = x + self.pos_embedding
+
         x = self.transformer_encoder(x)
         x = x.mean(dim = 1)
+
+        x = self.layer_norm(x)
         x = self.decoder(x)
         return x
 
@@ -94,9 +96,9 @@ if __name__ == '__main__':
 
     model = Transformer(768, dataset.get_no_of_classes())
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr = 1.0)
+    optimizer = torch.optim.Adam(model.parameters(), lr = 0.00003)
 
-    epochs = 1
+    epochs = 10
     for e in range(epochs):
         for i, (data, label) in enumerate(iter(dataset_loader)):
             optimizer.zero_grad()
@@ -105,11 +107,11 @@ if __name__ == '__main__':
             L = criterion(out, label.squeeze(1))
 
             L.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+            #nn.utils.clip_grad_norm_(model.parameters(), 0.5)
             optimizer.step()
         
             if i%10 == 0:
-                print("Epoch {} ({}/{}) Loss : {}".format(e, i, len(dataset_loader), round(L.item(), 2)))
+                print("Epoch {} ({}/{}) Loss : {}".format(e, i, len(dataset_loader), round(L.item(), 4)))
 
         acc_list= []
         for data, label in tqdm(iter(test_dataset_loader)):
